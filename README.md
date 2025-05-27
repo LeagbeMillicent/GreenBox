@@ -86,11 +86,6 @@ POST   /pickup/assign          → Assign to collector (admin)
 GET    /centers                → List all centers
 GET    /centers/nearby         → Find nearby by coordinates
 
-🏆 Challenges & Leaderboard(FI)
-
-GET    /challenges             → Active campaigns
-POST   /challenges/join        → Join challenge
-
 📊 Admin & Reporting
 
 GET    /admin/users            → All users
