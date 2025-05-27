@@ -55,6 +55,6 @@ class User extends Authenticatable
 
      public function pickups()
     {
-        return $this->hasMany(Pickup::class);
+        return $this->hasMany(Pickup::class,'user_id');
     }
 }

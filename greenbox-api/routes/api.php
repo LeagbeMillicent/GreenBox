@@ -28,15 +28,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 use App\Http\Controllers\PickupController;
+use App\Http\Controllers\CollectorController;
+use App\Http\Controllers\DropOffCenterController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pickup/request', [PickupController::class, 'requestPickup']);
     Route::get('/pickup/status/{id}', [PickupController::class, 'getStatus']);
     Route::get('/pickup/my-requests', [PickupController::class, 'myRequests']);
     Route::post('/pickup/assign', [PickupController::class, 'assign']);
+    Route::get('/pickup/cancelled', [PickupController::class, 'getCancelledPickups']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pickup/history', [PickupController::class, 'userHistory']);
 });
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/collectors', [CollectorController::class, 'index']);
+    Route::get('/collectors/{id}', [CollectorController::class, 'show']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/centers', [DropOffCenterController::class, 'index']);
+    Route::get('/centers/{id}', [DropOffCenterController::class, 'show']);
+    Route::post('create/centers', [DropOffCenterController::class, 'store']);
+    Route::put('update/centers/{id}', [DropOffCenterController::class, 'update']);
+    Route::delete('delete/centers/{id}', [DropOffCenterController::class, 'destroy']);
+});

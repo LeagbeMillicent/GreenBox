@@ -1,44 +1,30 @@
 <?php
-namespace App\Http\Controllers;
-
-use App\Models\Pickup;
+use App\Services\PickupService;
+use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class PickupController extends Controller
 {
-    // POST /pickup/request
-    public function requestPickup(Request $request)
-    {
-        $data = $request->validate([
-            'location' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'pickup_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
+    protected $pickupService;
 
-       // Handle image upload if provided
-    if ($request->hasFile('pickup_image')) {
-        $imagePath = $request->file('pickup_image')->store('pickups', 'public');
-        $data['pickup_image'] = $imagePath;
+    public function __construct(PickupService $pickupService)
+    {
+        $this->pickupService = $pickupService;
     }
 
-    $pickup = $request->user()->pickups()->create([
-        'pickup_date' => now(),
-        'location' => $data['location'],
-        'description' => $data['description'] ?? null,
-        'pickup_image' => $data['pickup_image'] ?? null,
-        'status' => 'pending', 
-    ]);
+    public function requestPickup(Request $request)
+    {
+        $pickup = $this->pickupService->requestPickup($request);
+
         return response()->json([
             'message' => 'Pickup request submitted.',
-            'pickup' => $pickup
+            'pickup' => $pickup,
         ], 201);
     }
 
-    // GET /pickup/status/{id}
     public function getStatus($id)
     {
-        $pickup = Pickup::find($id);
+        $pickup = $this->pickupService->getStatus($id);
 
         if (!$pickup) {
             return response()->json(['message' => 'Pickup not found'], 404);
@@ -47,15 +33,13 @@ class PickupController extends Controller
         return response()->json($pickup);
     }
 
-    // GET /pickup/my-requests
     public function myRequests()
     {
-        $pickups = Pickup::where('user_id', Auth::id())->get();
+        $pickups = $this->pickupService->myRequests(auth()->id());
 
         return response()->json($pickups);
     }
 
-    // POST /pickup/assign (Admin only)
     public function assign(Request $request)
     {
         $data = $request->validate([
@@ -63,10 +47,7 @@ class PickupController extends Controller
             'collector_id' => 'required|exists:users,id',
         ]);
 
-        $pickup = Pickup::find($data['pickup_id']);
-        $pickup->collector_id = $data['collector_id'];
-        $pickup->status = 'assigned';
-        $pickup->save();
+        $pickup = $this->pickupService->assignCollector($data);
 
         return response()->json([
             'message' => 'Pickup assigned to collector.',
@@ -74,31 +55,42 @@ class PickupController extends Controller
         ]);
     }
 
-
     public function userHistory(Request $request)
-{
-    $user = $request->user();
+    {
+        $filters = $request->only(['status', 'date_requested']);
+        $history = $this->pickupService->getUserHistory($request->user()->id, $filters);
 
-    //  filter by category
-    $status = $request->query('status');
-    $dateRequested = $request->query('date_requested'); 
-
-    $query = Pickup::where('user_id', $user->id);
-
-    if ($status) {
-        $query->where('status', $status);
+        return response()->json([
+            'message' => 'Pickup history retrieved successfully.',
+            'data' => $history,
+        ]);
     }
 
-    if ($dateRequested) {
-        $query->whereDate('created_at', $dateRequested);
+    public function cancelPickup(Request $request, $id)
+    {
+        $data = $request->validate([
+            'cancel_reason' => 'required|string|max:500',
+        ]);
+
+        $result = $this->pickupService->cancelPickup($id, $request->user()->id, $data);
+
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], 400);
+        }
+
+        return response()->json([
+            'message' => 'Pickup request cancelled successfully',
+            'pickup' => $result,
+        ]);
     }
 
-    $history = $query->orderBy('created_at', 'desc')->get();
+    public function getCancelledPickups()
+    {
+        $cancelled = $this->pickupService->getCancelledPickups();
 
-    return response()->json([
-        'message' => 'Pickup history retrieved successfully.',
-        'data' => $history,
-    ]);
-}
-
+        return response()->json([
+            'message' => 'Cancelled pickups fetched successfully',
+            'data' => $cancelled,
+        ]);
+    }
 }

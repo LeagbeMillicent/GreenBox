@@ -1,105 +1,104 @@
 <?php
 
-namespace App\Http\Controllers;
-
-use App\Models\User;
+use App\Services\AppLogger;
 use Illuminate\Http\Request;
+use App\Services\UserService;
+use Illuminate\Routing\Controller;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
-    /**
-     * GET /users — Fetch all users
-     */
-    public function index()
-    {
-        $users = User::all();
+    protected $userService;
+    protected $logger;
 
-        return response()->json([
-            'message' => 'All users retrieved successfully',
-            'data' => $users
-        ], 200);
+    public function __construct(UserService $userService, AppLogger $logger)
+    {
+        $this->userService = $userService;
+        $this->logger = $logger;
     }
 
-    /**
-     * GET /users/{id} — Get user profile
-     */
+    public function index()
+    {
+        $users = $this->userService->getAllUsers();
+        if ($users->isEmpty()) {
+            $this->logger->info('No users found');
+            return response()->json(['message' => 'No users found'], 404);
+        }
+
+        AppLogger::info('All users retrieved successfully');
+
+        return response()->json([
+
+            'message' => 'All users retrieved successfully, [' . count($users) . ' users found]',
+            'data' => $users,
+        ]);
+    }
+
     public function show($id)
     {
-        $user = User::find($id);
+        $user = $this->userService->getUserById($id);
 
-        if (!$user) {
+        if (! $user) {
+            AppLogger::warning("User with ID {$id} not found, ['user_id' => $id]);");
             return response()->json(['message' => 'User not found'], 404);
         }
+        AppLogger::info("User profile retrieved successfully, ['user_id' => $id]);");
 
         return response()->json([
             'message' => 'User profile retrieved successfully',
-            'data' => $user
+            'data' => $user,
         ]);
     }
 
-    /**
-     * GET /users/{id}/history — Get user's pickup history 
-     */
     public function history($id)
     {
-        $user = User::find($id);
+        $history = $this->userService->getUserHistory($id);
 
-        if (! $user) {
+        if (! $history) {
             return response()->json(['message' => 'User not found'], 404);
         }
-
-        // Placeholder for actual pickup data
-        $history = [
-            ['date' => '2025-01-01', 'location' => 'East Town', 'status' => 'Completed'],
-            ['date' => '2025-02-10', 'location' => 'West End', 'status' => 'Pending']
-        ];
 
         return response()->json([
             'message' => 'Pickup history retrieved successfully',
-            'data' => $history
+            'data' => $history,
         ]);
     }
 
-    /**
-     * PUT /users/{id}/update — Update user profile
-     */
     public function update(Request $request, $id)
     {
-        $user = User::find($id);
+        try {
+            $user = $this->userService->updateUser($id, $request->all());
 
-        if (! $user) {
-            return response()->json(['message' => 'User not found'], 404);
+            if (! $user) {
+                AppLogger::warning('User update failed, user not found', ['user_id' => $id]);
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            return response()->json([
+                'message' => 'User updated successfully',
+                'data' => $user,
+            ]);
+        } catch (ValidationException $e) {
+            AppLogger::error('User update validation failed', [
+                'user_id' => $id,
+                'errors' => $e->errors()
+            ]);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         }
-
-        $fields = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'phone' => 'sometimes|string|max:15',
-            'location' => 'sometimes|string|max:255',
-            'profile_picture' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'role' => 'sometimes|in:general,collector,admin',
-        ]);
-
-        $user->update($fields);
-
-        return response()->json([
-            'message' => 'User updated successfully',
-            'data' => $user
-        ]);
     }
 
-    /**
-     * DELETE /users/{id}/delete — Delete user account
-     */
     public function destroy($id)
     {
-        $user = User::find($id);
+        $deleted = $this->userService->deleteUser($id);
 
-        if (! $user) {
+        if (! $deleted) {
+            AppLogger::warning('User not found', ['user_id' => $id]);
             return response()->json(['message' => 'User not found'], 404);
         }
-
-        $user->delete();
+        AppLogger::info('User deleted successfully', ['user_id' => $id]);
 
         return response()->json(['message' => 'User deleted successfully']);
     }
