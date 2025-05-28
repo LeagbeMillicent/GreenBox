@@ -18,6 +18,15 @@ class DropOffCenterService
 
     public function create(array $data)
     {
+        // Check if name and address already exists
+        $existing = DropOffCenter::where('name', $data['name'])
+                                 ->where('address', $data['address'])
+                                 ->first();
+
+        if ($existing) {
+            return $existing; 
+        }
+
         return DropOffCenter::create($data);
     }
 

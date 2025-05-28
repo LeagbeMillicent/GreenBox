@@ -1,4 +1,5 @@
 <?php
+namespace App\Http\Controllers;
 use App\Services\PickupService;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class PickupController extends Controller
 
     public function myRequests()
     {
-        $pickups = $this->pickupService->myRequests(auth()->id());
+        $pickups = $this->pickupService->myRequests(request()->user()->id);
 
         return response()->json($pickups);
     }

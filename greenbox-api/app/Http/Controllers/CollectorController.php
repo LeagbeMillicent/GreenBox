@@ -55,4 +55,6 @@ class CollectorController extends Controller
 
         return response()->json($history);
     }
+
+    
 }

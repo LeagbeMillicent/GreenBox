@@ -1,5 +1,5 @@
 <?php
-
+namespace App\Http\Controllers;
 use App\Services\AppLogger;
 use Illuminate\Http\Request;
 use App\Services\UserService;

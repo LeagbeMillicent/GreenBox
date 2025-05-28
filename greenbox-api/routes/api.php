@@ -4,6 +4,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PickupController;
+use App\Http\Controllers\CollectorController;
+use App\Http\Controllers\DropOffCenterController;
+use App\Http\Controllers\CollectorRequestController;
+use App\Http\Controllers\AdminCollectorRequestController;
+
+
 
 // Auth routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -22,14 +29,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index']); // Fetch all users
     Route::get('get/user/{id}', [UserController::class, 'show']); // Get profile
     Route::get('/users/{id}/history', [UserController::class, 'history']); // Pickup history
-    Route::post('update/user/{id}/update', [UserController::class, 'update']); // Update profile
-    Route::delete('delete/user/{id}/delete', [UserController::class, 'destroy']); // Delete profile
+    Route::post('user/{id}/update', [UserController::class, 'update']); // Update profile
+    Route::delete('user/{id}/delete', [UserController::class, 'destroy']); // Delete profile
 });
-
-
-use App\Http\Controllers\PickupController;
-use App\Http\Controllers\CollectorController;
-use App\Http\Controllers\DropOffCenterController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pickup/request', [PickupController::class, 'requestPickup']);
@@ -46,6 +48,11 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/collectors', [CollectorController::class, 'index']);
     Route::get('/collectors/{id}', [CollectorController::class, 'show']);
+    Route::get('/collectors/pickups', [CollectorController::class, 'assignedPickups']);
+    Route::put('/collectors/pickups/{id}/status', [CollectorController::class, 'updateStatus']);
+    Route::get('/collectors/pickups/history', [CollectorController::class, 'pickupHistory']);
+    
+
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -55,3 +62,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('update/centers/{id}', [DropOffCenterController::class, 'update']);
     Route::delete('delete/centers/{id}', [DropOffCenterController::class, 'destroy']);
 });
+
+Route::middleware('auth:sanctum')->post('/collector/request', [CollectorRequestController::class, 'store']);
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::put('/admin/collector-request/{id}/approve', [AdminCollectorRequestController::class, 'approve']);
+    Route::put('/admin/collector-request/{id}/reject', [AdminCollectorRequestController::class, 'reject']);
+    Route::get('/admin/collector-requests', [AdminCollectorRequestController::class, 'index']);
+});
+
+

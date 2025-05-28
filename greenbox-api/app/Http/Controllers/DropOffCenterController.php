@@ -25,19 +25,24 @@ class DropOffCenterController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'required|string',
-            'location' => 'nullable|string',
-            'contact_number' => 'nullable|string|max:20',
-            'operating_hours' => 'nullable|string',
-        ]);
+{
+    $data = $request->validate([
+        'name' => 'required|string|max:255',
+        'address' => 'required|string',
+        'location' => 'nullable|string',
+        'contact_number' => 'nullable|string|max:20',
+        'operating_hours' => 'nullable|string',
+    ]);
 
-        $center = $this->service->create($data);
+    $existing = $this->service->create($data);
 
-        return response()->json($center, 201);
-    }
+    $isNew = $existing->wasRecentlyCreated ?? false;
+
+    return response()->json([
+        'message' => $isNew ? 'Drop-off center created successfully.' : 'Drop-off center already exists.',
+        'center' => $existing
+    ], $isNew ? 201 : 200);
+}
 
     public function update(Request $request, $id)
     {
